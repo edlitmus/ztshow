@@ -6,11 +6,13 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"github.com/uxbh/ztdns/ztapi"
+	"golang.org/x/crypto/ssh"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -22,8 +24,10 @@ var hostName string
 // ZtSSHData config data
 type ZtSSHData map[string]string
 
+var ztConfig ZtSSHData
+var ztnetwork ztapi.Network
+
 func main() {
-	var ztConfig ZtSSHData
 	filename, err := filepath.Abs(configFile)
 	if err != nil {
 		log.Fatal(err)
@@ -72,14 +76,7 @@ func main() {
 			Aliases: []string{"l"},
 			Usage:   "Connect to a ZeroTier host",
 			Action: func(c *cli.Context) error {
-				log.Infof("Looking for host %s", hostName)
-				lst := ztapi.GetMemberList(ztConfig["ZT_API"], ztConfig["ZT_URL"], ztnetwork.ID)
-				names := memberNames(*lst, onlineOnly)
-				for _, name := range names {
-					if name.Name == hostName {
-						log.Infof("Found %s…", hostName)
-					}
-				}
+				connect(*ztnetwork)
 				return nil
 			},
 			Flags: []cli.Flag{
@@ -107,4 +104,64 @@ func memberNames(list []ztapi.Member, status bool) []ztapi.Member {
 		names = append(names, list[index])
 	}
 	return names
+}
+
+func connect(ztnetwork ztapi.Network) {
+	usrname := usr.Username
+	var host string
+	var err error
+	port := 22
+
+	if strings.Contains(hostName, "@") {
+		userHost := strings.Split(hostName, "@")
+		if len(userHost) > 0 {
+			if userHost[0] != usrname {
+				usrname = userHost[0]
+			}
+			hostName = userHost[1]
+		}
+	}
+	if strings.Contains(hostName, ":") {
+		hostPort := strings.Split(hostName, ":")
+		if len(hostPort) > 0 {
+			host = hostPort[0]
+			port, err = strconv.Atoi(hostPort[1])
+			if err != nil {
+				log.Fatal(fmt.Sprintf("Unable to parse port '%s': %s\n", hostPort[1], err))
+			}
+		}
+	}
+	if host == "" {
+		host = hostName
+	}
+
+	log.Infof("Looking for host %s in network %s", hostName, ztnetwork.ID)
+	lst := ztapi.GetMemberList(ztConfig["ZT_API"], ztConfig["ZT_URL"], ztnetwork.ID)
+	names := memberNames(*lst, onlineOnly)
+	for _, name := range names {
+		if name.Name == host {
+			agent := sshAgent()
+			if agent == nil {
+				log.Warn("Can't connect with ssh-agent")
+			}
+			privateKeyPath := filepath.Join(usr.HomeDir, ".ssh/id_rsa")
+			pubKeys := publicKeyFile(privateKeyPath)
+			if pubKeys == nil {
+				log.Fatalf("Can't get public keys from %s", privateKeyPath)
+			}
+			sshConfig := &ssh.ClientConfig{
+				User: usrname,
+				Auth: []ssh.AuthMethod{
+					pubKeys,
+					agent,
+				},
+				HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			}
+
+			connStr := fmt.Sprintf("%s:%d", name.Config.IPAssignments[0], port)
+			log.Infof("Trying to connect as %s via %s…", usrname, connStr)
+			newSession(sshConfig, connStr)
+			break
+		}
+	}
 }
