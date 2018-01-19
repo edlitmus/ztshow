@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -14,18 +15,24 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
+func deferredClose(c io.Closer, err *error) {
+	if cerr := c.Close(); cerr != nil && *err == nil {
+		*err = cerr
+	}
+}
+
 func newSession(config *ssh.ClientConfig, server string) error {
 	connection, err := ssh.Dial("tcp", server, config)
 	if err != nil {
 		log.Fatalf("Failed to dial: %s", err)
 	}
-	defer connection.Close()
+	defer deferredClose(connection, &err)
 
 	session, err := connection.NewSession()
 	if err != nil {
 		log.Fatalf("Failed to create session: %s", err)
 	}
-	defer session.Close()
+	defer deferredClose(session, &err)
 
 	// Set IO
 	session.Stdout = ansicolor.NewAnsiColorWriter(os.Stdout)

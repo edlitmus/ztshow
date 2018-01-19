@@ -25,7 +25,6 @@ var hostName string
 type ZtSSHData map[string]string
 
 var ztConfig ZtSSHData
-var ztnetwork ztapi.Network
 
 func main() {
 	filename, err := filepath.Abs(configFile)
@@ -140,28 +139,35 @@ func connect(ztnetwork ztapi.Network) {
 	names := memberNames(*lst, onlineOnly)
 	for _, name := range names {
 		if name.Name == host {
-			agent := sshAgent()
-			if agent == nil {
-				log.Warn("Can't connect with ssh-agent")
-			}
-			privateKeyPath := filepath.Join(usr.HomeDir, ".ssh/id_rsa")
-			pubKeys := publicKeyFile(privateKeyPath)
-			if pubKeys == nil {
-				log.Fatalf("Can't get public keys from %s", privateKeyPath)
-			}
-			sshConfig := &ssh.ClientConfig{
-				User: usrname,
-				Auth: []ssh.AuthMethod{
-					pubKeys,
-					agent,
-				},
-				HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-			}
-
-			connStr := fmt.Sprintf("%s:%d", name.Config.IPAssignments[0], port)
-			log.Infof("Trying to connect as %s via %s…", usrname, connStr)
-			newSession(sshConfig, connStr)
+			connectToHost(name, usrname, host, port)
 			break
 		}
+	}
+}
+
+func connectToHost(name ztapi.Member, usrname string, host string, port int) {
+	agent := sshAgent()
+	if agent == nil {
+		log.Warn("Can't connect with ssh-agent")
+	}
+	privateKeyPath := filepath.Join(usr.HomeDir, ".ssh/id_rsa")
+	pubKeys := publicKeyFile(privateKeyPath)
+	if pubKeys == nil {
+		log.Fatalf("Can't get public keys from %s", privateKeyPath)
+	}
+	sshConfig := &ssh.ClientConfig{
+		User: usrname,
+		Auth: []ssh.AuthMethod{
+			pubKeys,
+			agent,
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	connStr := fmt.Sprintf("%s:%d", name.Config.IPAssignments[0], port)
+	log.Infof("Trying to connect as %s via %s…", usrname, connStr)
+	err := newSession(sshConfig, connStr)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
