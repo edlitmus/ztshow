@@ -44,7 +44,10 @@ func main() {
 			log.Fatal(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
 		}
 	}
-	ztnetwork := ztapi.GetNetworkInfo(ztConfig["ZT_API"], ztConfig["ZT_URL"], ztConfig["ZT_NETWORK"])
+	ztnetwork := ztapi.GetNetworkInfo(
+		ztConfig["ZT_API"],
+		ztConfig["ZT_URL"],
+		ztConfig["ZT_NETWORK"])
 
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
