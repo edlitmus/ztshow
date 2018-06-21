@@ -37,13 +37,15 @@ func newSession(config *ssh.ClientConfig, server string) error {
 	// Set IO
 	session.Stdout = ansicolor.NewAnsiColorWriter(os.Stdout)
 	session.Stderr = ansicolor.NewAnsiColorWriter(os.Stderr)
-	in, _ := session.StdinPipe()
+	in, err := session.StdinPipe()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
 
 	// Set up terminal modes
 	// https://net-ssh.github.io/net-ssh/classes/Net/SSH/Connection/Term.html
 	// https://www.ietf.org/rfc/rfc4254.txt
 	// https://godoc.org/golang.org/x/crypto/ssh
-	// THIS IS THE TITLE
 	// https://pythonhosted.org/ANSIColors-balises/ANSIColors.html
 	modes := ssh.TerminalModes{
 		ssh.ECHO:  0, // echoing
@@ -67,7 +69,10 @@ func newSession(config *ssh.ClientConfig, server string) error {
 		for {
 			<-c
 			fmt.Println("^C")
-			fmt.Fprint(in, "exit\n")
+			_, err := fmt.Fprint(in, "exit\n")
+			if err != nil {
+				fmt.Printf("%s", err)
+			}
 			os.Exit(0)
 		}
 	}()
@@ -75,7 +80,10 @@ func newSession(config *ssh.ClientConfig, server string) error {
 	// Accepting commands
 	for {
 		reader := bufio.NewReader(os.Stdin)
-		str, _ := reader.ReadString('\n')
+		str, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("%s", err)
+		}
 		fmt.Fprint(in, str)
 	}
 }
