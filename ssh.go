@@ -28,19 +28,7 @@ func newSession(config *ssh.ClientConfig, server string) error {
 	}
 	defer deferredClose(connection, &err)
 
-	session, err := connection.NewSession()
-	if err != nil {
-		log.Fatalf("Failed to create session: %s", err)
-	}
-	defer deferredClose(session, &err)
-
-	// Set IO
-	session.Stdout = ansicolor.NewAnsiColorWriter(os.Stdout)
-	session.Stderr = ansicolor.NewAnsiColorWriter(os.Stderr)
-	in, err := session.StdinPipe()
-	if err != nil {
-		fmt.Printf("%s", err)
-	}
+	session, in := initSession(connection)
 
 	// Set up terminal modes
 	// https://net-ssh.github.io/net-ssh/classes/Net/SSH/Connection/Term.html
@@ -84,8 +72,28 @@ func newSession(config *ssh.ClientConfig, server string) error {
 		if err != nil {
 			fmt.Printf("%s", err)
 		}
-		fmt.Fprint(in, str)
+		_, err = fmt.Fprint(in, str)
+		if err != nil {
+			fmt.Printf("%s", err)
+		}
 	}
+}
+
+func initSession(connection *ssh.Client) (*ssh.Session, io.WriteCloser) {
+	session, err := connection.NewSession()
+	if err != nil {
+		log.Fatalf("Failed to create session: %s", err)
+	}
+	defer deferredClose(session, &err)
+
+	// Set IO
+	session.Stdout = ansicolor.NewAnsiColorWriter(os.Stdout)
+	session.Stderr = ansicolor.NewAnsiColorWriter(os.Stderr)
+	in, err := session.StdinPipe()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+	return session, in
 }
 
 func publicKeyFile(file string) ssh.AuthMethod {
