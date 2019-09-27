@@ -44,12 +44,12 @@ func main() {
 			log.Fatal(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
 		}
 	}
-	ztnetwork, err := ztapi.GetNetworkInfo(
+	ztnetwork := ztapi.GetNetworkInfo(
 		ztConfig["ZT_API"],
 		ztConfig["ZT_URL"],
 		ztConfig["ZT_NETWORK"])
-	if err != nil {
-		log.Fatal(fmt.Sprintf("network error: %s\n", err))
+	if ztnetwork == nil {
+		log.Fatal("network error")
 	}
 
 	app := cli.NewApp()
@@ -60,9 +60,9 @@ func main() {
 			Usage:   "list peers",
 			Action: func(c *cli.Context) error {
 				log.Infof("Getting Members of Network: %s", ztnetwork.Config.Name)
-				lst, er := ztapi.GetMemberList(ztConfig["ZT_API"], ztConfig["ZT_URL"], ztnetwork.ID)
-				if er != nil {
-					log.Fatal(fmt.Sprintf("Unable to get member list: %s\n", er))
+				lst := ztapi.GetMemberList(ztConfig["ZT_API"], ztConfig["ZT_URL"], ztnetwork.ID)
+				if lst == nil {
+					log.Fatal("Unable to get member list")
 				}
 				log.Infof("Got %d members", len(*lst))
 				names := memberNames(*lst, onlineOnly)
@@ -144,9 +144,9 @@ func connect(ztnetwork ztapi.Network) {
 	}
 
 	log.Infof("Looking for host %s in network %s", hostName, ztnetwork.ID)
-	lst, err := ztapi.GetMemberList(ztConfig["ZT_API"], ztConfig["ZT_URL"], ztnetwork.ID)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Unable to get member list: %s\n", err))
+	lst := ztapi.GetMemberList(ztConfig["ZT_API"], ztConfig["ZT_URL"], ztnetwork.ID)
+	if lst == nil {
+		log.Fatal("Unable to get member list")
 	}
 	names := memberNames(*lst, onlineOnly)
 	for _, name := range names {
