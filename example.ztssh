@@ -1,0 +1,6 @@
+# place in ~/.ztssh
+ZT_URL: "https://my.zerotier.com/api"
+ZT_API: "API_KEY_GOES_HERE"
+ZT_NETWORK: "NETWORK_ID"
+ZT_SSH_USERNAME: "username"
+ZT_SSH_PORT: "22"
