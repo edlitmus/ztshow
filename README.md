@@ -17,5 +17,5 @@ ztssh list -hostfile
 
 ### list online hosts in hostfile format
 ```shell
-ztssh list -hostfile
+ztssh list -hostfile -online
 ```
