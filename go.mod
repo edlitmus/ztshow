@@ -1,18 +1,19 @@
 module github.com/edlitmus/ztssh
 
+go 1.18
+
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/onsi/gomega v1.4.2 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
-	github.com/sirupsen/logrus v1.0.5
-	github.com/stretchr/testify v1.2.2 // indirect
-	github.com/urfave/cli v1.20.0
+	github.com/shiena/ansicolor v0.0.0-20200904210342-c7312218db18
+	github.com/sirupsen/logrus v1.8.1
+	github.com/urfave/cli v1.22.9
 	github.com/uxbh/ztdns v0.0.1
-	golang.org/x/crypto v0.0.0-20180621125126-a49355c7e3f8
-	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
-	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
-	gopkg.in/yaml.v2 v2.2.1
+	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
+	gopkg.in/yaml.v2 v2.4.0
 )
 
-go 1.13
+require (
+	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d // indirect
+	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
+)

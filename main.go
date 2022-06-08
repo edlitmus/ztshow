@@ -19,6 +19,7 @@ import (
 var usr, _ = user.Current()
 var configFile = filepath.Join(usr.HomeDir, ".ztssh")
 var onlineOnly bool
+var hostStyle bool
 var hostName string
 
 // ZtSSHData config data
@@ -67,7 +68,11 @@ func main() {
 				log.Infof("Got %d members", len(*lst))
 				names := memberNames(*lst, onlineOnly)
 				for _, name := range names {
-					fmt.Printf("Name: %s, Online: %t, IPs: %s\n", name.Name, name.Online, strings.Join(name.Config.IPAssignments, ", "))
+					if hostStyle {
+						fmt.Printf("%s\t%s\n", strings.Join(name.Config.IPAssignments, ", "), name.Name)
+					} else {
+						fmt.Printf("Name: %s, Online: %t, IPs: %s\n", name.Name, name.Online, strings.Join(name.Config.IPAssignments, ", "))
+					}
 				}
 				return nil
 			},
@@ -76,6 +81,11 @@ func main() {
 					Name:        "online, o",
 					Usage:       "online hosts only",
 					Destination: &onlineOnly,
+				},
+				cli.BoolFlag{
+					Name:        "hostfile",
+					Usage:       "hosts file output",
+					Destination: &hostStyle,
 				},
 			},
 		},
