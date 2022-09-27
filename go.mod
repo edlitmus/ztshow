@@ -1,4 +1,4 @@
-module github.com/edlitmus/ztssh
+module github.com/edlitmus/ztshow
 
 go 1.19
 

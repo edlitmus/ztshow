@@ -21,10 +21,10 @@ var onlineOnly bool
 var hostStyle bool
 var hostName string
 
-// ZtSSHData config data
-type ZtSSHData map[string]string
+// ZtShowData config data
+type ZtShowData map[string]string
 
-var ztConfig ZtSSHData
+var ztConfig ZtShowData
 
 func main() {
 	filename, err := filepath.Abs(configFile)

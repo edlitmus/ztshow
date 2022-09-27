@@ -1,21 +1,21 @@
-# ztssh
+# ztshow
 
 ## list all hosts
 ```shell
-ztssh list
+ztshow list
 ```
 
 ### list online hosts only
 ```shell
-ztssh list -online
+ztshow list -online
 ```
 
 ### list all hosts in hostfile format
 ```shell
-ztssh list -hostfile
+ztshow list -hostfile
 ```
 
 ### list online hosts in hostfile format
 ```shell
-ztssh list -hostfile -online
+ztshow list -hostfile -online
 ```
