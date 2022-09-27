@@ -11,7 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"github.com/uxbh/ztdns/ztapi"
-	yaml "gopkg.in/yaml.v2"
+	"golang.org/x/crypto/ssh"
+	yaml "gopkg.in/yaml.v3"
 )
 
 var usr, _ = user.Current()
