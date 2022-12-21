@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"github.com/uxbh/ztdns/ztapi"
-	"golang.org/x/crypto/ssh"
 	yaml "gopkg.in/yaml.v3"
 )
 
