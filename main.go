@@ -46,7 +46,7 @@ func main() {
 
 		err = yaml.Unmarshal(yamlData, &ztConfig)
 		if err != nil {
-			logger.Fatal(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
+			logger.Fatalf(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
 		}
 	}
 
