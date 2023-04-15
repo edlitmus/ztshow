@@ -1,24 +1,29 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"github.com/uxbh/ztdns/ztapi"
+
+	ztcentral "github.com/zerotier/go-ztcentral"
+	"github.com/zerotier/go-ztcentral/pkg/spec"
 	yaml "gopkg.in/yaml.v3"
 )
 
 var usr, _ = user.Current()
-var configFile = filepath.Join(usr.HomeDir, ".ztssh")
+var configFile = filepath.Join(usr.HomeDir, ".ztshow")
 var onlineOnly bool
 var hostStyle bool
-var hostName string
+
+// Number of seconds in 48 hours
+const FourtyEightHours = 172800
 
 // ZtShowData config data
 type ZtShowData map[string]string
@@ -33,7 +38,7 @@ func main() {
 	var yamlData []byte
 
 	if _, err = os.Stat(filename); !os.IsNotExist(err) {
-		yamlData, err = ioutil.ReadFile(filename)
+		yamlData, err = os.ReadFile(filename)
 		if err != nil {
 			log.Fatal("error reading config file: ", err)
 		}
@@ -43,12 +48,19 @@ func main() {
 			log.Fatal(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
 		}
 	}
-	ztnetwork := ztapi.GetNetworkInfo(
-		ztConfig["ZT_API"],
-		ztConfig["ZT_URL"],
-		ztConfig["ZT_NETWORK"])
-	if ztnetwork == nil {
+
+	ztnetwork, err := ztcentral.NewClient(ztConfig["ZT_API"])
+	if err != nil {
 		log.Fatal("network error")
+	}
+
+	ctx := context.Background()
+
+	// get list of networks
+	networks, err := ztnetwork.GetNetworks(ctx)
+	if err != nil {
+		log.Println("error:", err.Error())
+		os.Exit(1)
 	}
 
 	app := cli.NewApp()
@@ -58,20 +70,27 @@ func main() {
 			Aliases: []string{"l"},
 			Usage:   "list peers",
 			Action: func(c *cli.Context) error {
-				log.Infof("Getting Members of Network: %s", ztnetwork.Config.Name)
-				lst := ztapi.GetMemberList(ztConfig["ZT_API"], ztConfig["ZT_URL"], ztnetwork.ID)
-				if lst == nil {
-					log.Fatal("Unable to get member list")
-				}
-				log.Infof("Got %d members", len(*lst))
-				names := memberNames(*lst, onlineOnly)
-				for _, name := range names {
-					if hostStyle {
-						fmt.Printf("%s\t%s\n", strings.Join(name.Config.IPAssignments, ", "), name.Name)
-					} else {
-						fmt.Printf("Name: %s, Online: %t, IPs: %s\n", name.Name, name.Online, strings.Join(name.Config.IPAssignments, ", "))
+				// print networks and members
+				for _, n := range networks {
+					log.Infof("Getting Members of Network: %s", *n.Config.Name)
+					members, err := ztnetwork.GetMembers(ctx, *n.Id)
+					if err != nil {
+						log.Fatal("Unable to get member list")
+						os.Exit(1)
+					}
+
+					names := memberNames(members, onlineOnly)
+					log.Infof("Got %d members", len(names))
+
+					for _, name := range names {
+						if hostStyle {
+							fmt.Printf("%s\t%s\n", strings.Join(*name.Config.IpAssignments, ", "), *name.Name)
+						} else {
+							fmt.Printf("Name: %s, Online: %t, IPs: %s\n", *name.Name, isOnline(name), strings.Join(*name.Config.IpAssignments, ", "))
+						}
 					}
 				}
+
 				return nil
 			},
 			Flags: []cli.Flag{
@@ -95,13 +114,28 @@ func main() {
 	}
 }
 
-func memberNames(list []ztapi.Member, status bool) []ztapi.Member {
-	var names []ztapi.Member
-	for index := 0; index < len(list); index++ {
-		if status && !list[index].Online {
+func memberNames(list []*spec.Member, status bool) []*spec.Member {
+	var names []*spec.Member
+	for _, m := range list {
+		online := isOnline(m)
+
+		if status && !online {
 			continue
 		}
-		names = append(names, list[index])
+		names = append(names, m)
 	}
 	return names
+}
+
+func isOnline(m *spec.Member) bool {
+	online := true
+	if *m.Config.LastAuthorizedTime == int64(0) || *m.LastOnline == int64(0) || timedOut(*m.Config.LastAuthorizedTime) {
+		online = false
+	}
+	return online
+}
+
+func timedOut(lastSeen int64) bool {
+	now := time.Now().Unix()
+	return now-lastSeen >= FourtyEightHours
 }
