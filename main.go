@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
 	ztcentral "github.com/zerotier/go-ztcentral"
@@ -31,27 +31,28 @@ type ZtShowData map[string]string
 var ztConfig ZtShowData
 
 func main() {
+	logger := log.New(os.Stderr, "", 0)
 	filename, err := filepath.Abs(configFile)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	var yamlData []byte
 
 	if _, err = os.Stat(filename); !os.IsNotExist(err) {
 		yamlData, err = os.ReadFile(filename)
 		if err != nil {
-			log.Fatal("error reading config file: ", err)
+			logger.Fatal("error reading config file: ", err)
 		}
 
 		err = yaml.Unmarshal(yamlData, &ztConfig)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
+			logger.Fatal(fmt.Sprintf("Unable to parse %s: %s\n", filename, err))
 		}
 	}
 
 	ztnetwork, err := ztcentral.NewClient(ztConfig["ZT_API"])
 	if err != nil {
-		log.Fatal("network error")
+		logger.Fatal("network error")
 	}
 
 	ctx := context.Background()
@@ -59,7 +60,7 @@ func main() {
 	// get list of networks
 	networks, err := ztnetwork.GetNetworks(ctx)
 	if err != nil {
-		log.Println("error:", err.Error())
+		logger.Println("error:", err.Error())
 		os.Exit(1)
 	}
 
@@ -72,15 +73,15 @@ func main() {
 			Action: func(c *cli.Context) error {
 				// print networks and members
 				for _, n := range networks {
-					log.Infof("Getting Members of Network: %s", *n.Config.Name)
+					logger.Printf("Getting Members of Network: %s", *n.Config.Name)
 					members, err := ztnetwork.GetMembers(ctx, *n.Id)
 					if err != nil {
-						log.Fatal("Unable to get member list")
+						logger.Fatal("Unable to get member list")
 						os.Exit(1)
 					}
 
 					names := memberNames(members, onlineOnly)
-					log.Infof("Got %d members", len(names))
+					logger.Printf("Got %d members", len(names))
 
 					for _, name := range names {
 						if hostStyle {
@@ -110,7 +111,7 @@ func main() {
 
 	err = app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 }
 
