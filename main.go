@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -23,7 +24,7 @@ var onlineOnly bool
 var hostStyle bool
 
 // Number of seconds in 48 hours
-const FourtyEightHours = 172800
+const FortyEightHours = 172800
 
 // ZtShowData config data
 type ZtShowData map[string]string
@@ -129,14 +130,25 @@ func memberNames(list []*spec.Member, status bool) []*spec.Member {
 }
 
 func isOnline(m *spec.Member) bool {
-	online := true
-	if *m.Config.LastAuthorizedTime == int64(0) || *m.LastOnline == int64(0) || timedOut(*m.Config.LastAuthorizedTime) {
-		online = false
-	}
+	online := timedOut(*m.LastOnline)
 	return online
 }
 
 func timedOut(lastSeen int64) bool {
-	now := time.Now().Unix()
-	return now-lastSeen >= FourtyEightHours
+	if lastSeen > 0 {
+		now := time.Now()
+		last := time.UnixMilli(lastSeen)
+		diff := now.Unix() - last.Unix()
+		return diff < FortyEightHours
+	}
+	return false
+}
+
+// DumpThing is useful for debugging
+func dumper(thing interface{}) {
+	json, err := json.MarshalIndent(thing, "", "  ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(json))
 }
