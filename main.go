@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	ztcentral "github.com/zerotier/go-ztcentral"
 	"github.com/zerotier/go-ztcentral/pkg/spec"
@@ -21,7 +21,8 @@ import (
 var usr, _ = user.Current()
 var configFile = filepath.Join(usr.HomeDir, ".ztshow")
 var onlineOnly bool
-var hostStyle bool
+var style string
+var verbose bool
 
 // Number of seconds in 48 hours
 const FortyEightHours = 172800
@@ -61,12 +62,11 @@ func main() {
 	// get list of networks
 	networks, err := ztnetwork.GetNetworks(ctx)
 	if err != nil {
-		logger.Println("error:", err.Error())
-		os.Exit(1)
+		logger.Fatalf("error: %s\n", err.Error())
 	}
 
 	app := cli.NewApp()
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:    "list",
 			Aliases: []string{"l"},
@@ -74,7 +74,9 @@ func main() {
 			Action: func(c *cli.Context) error {
 				// print networks and members
 				for _, n := range networks {
-					logger.Printf("Getting Members of Network: %s", *n.Config.Name)
+					if verbose {
+						logger.Printf("Getting Members of Network: %s", *n.Config.Name)
+					}
 					members, err := ztnetwork.GetMembers(ctx, *n.Id)
 					if err != nil {
 						logger.Fatal("Unable to get member list")
@@ -82,12 +84,17 @@ func main() {
 					}
 
 					names := memberNames(members, onlineOnly)
-					logger.Printf("Got %d members", len(names))
+					if verbose {
+						logger.Printf("Got %d members", len(names))
+					}
 
 					for _, name := range names {
-						if hostStyle {
+						switch style {
+						case "hostfile":
 							fmt.Printf("%s\t%s\n", strings.Join(*name.Config.IpAssignments, ", "), *name.Name)
-						} else {
+						case "ssh":
+							fmt.Printf("Host %s\n\tHostName %s\n", *name.Name, (*name.Config.IpAssignments)[0])
+						default:
 							fmt.Printf("Name: %s, Online: %t, IPs: %s\n", *name.Name, isOnline(name), strings.Join(*name.Config.IpAssignments, ", "))
 						}
 					}
@@ -96,15 +103,23 @@ func main() {
 				return nil
 			},
 			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:        "online, o",
+				&cli.BoolFlag{
+					Name:        "online",
+					Aliases:     []string{"o"},
 					Usage:       "online hosts only",
 					Destination: &onlineOnly,
 				},
-				cli.BoolFlag{
-					Name:        "hostfile",
-					Usage:       "hosts file output",
-					Destination: &hostStyle,
+				&cli.BoolFlag{
+					Name:        "verbose",
+					Aliases:     []string{"v"},
+					Usage:       "verbose output",
+					Destination: &verbose,
+				},
+				&cli.StringFlag{
+					Name:        "style",
+					Aliases:     []string{"s"},
+					Usage:       "file output style (hostfile or ssh)",
+					Destination: &style,
 				},
 			},
 		},
